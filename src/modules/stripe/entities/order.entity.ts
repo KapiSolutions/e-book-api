@@ -5,6 +5,8 @@ export class Order {
     email: string;
   };
   prodName: string;
+  finalDocName: string;
+  coverPages: Array<number>;
   paymentIntent: string;
   amountTotal: number;
   created: number;
