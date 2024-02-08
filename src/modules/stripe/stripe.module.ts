@@ -6,6 +6,8 @@ import {
   StripeModuleConfig,
 } from '@golevelup/nestjs-stripe';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { CloudStorage } from 'src/providers/cloudStorage';
+import { ModifyPDF } from 'src/providers/modifyPDF';
 
 @Module({
   imports: [
@@ -19,6 +21,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     }),
   ],
   controllers: [StripeController],
-  providers: [StripeService],
+  providers: [StripeService, CloudStorage, ModifyPDF],
 })
 export class StripeModule {}
