@@ -20,7 +20,6 @@ export class EmailSender {
       const accessToken = await new Promise<string>((resolve, reject) => {
         oauth2Client.getAccessToken((err, token) => {
           if (err) {
-            console.log('EEERRRRR:', err);
             reject('Failed to create access token.');
           }
           resolve(token as string);
@@ -54,13 +53,13 @@ export class EmailSender {
       if (!this.transporter) {
         throw new Error('Nodemailer not initialized');
       }
-
       await this.transporter.sendMail(options);
-      this.transporter.close();
-      console.log('Email sent successfully');
+      console.log('✅ Email sent successfully');
     } catch (err) {
       console.error('Error sending email:', err);
       throw new Error('Failed to send email');
+    } finally {
+      this.transporter?.close();
     }
   }
 }
