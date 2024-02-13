@@ -8,6 +8,7 @@ import {
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { CloudStorage } from 'src/providers/cloudStorage';
 import { ModifyPDF } from 'src/providers/modifyPDF';
+import { EmailSender } from 'src/providers/emailSender';
 
 @Module({
   imports: [
@@ -21,6 +22,6 @@ import { ModifyPDF } from 'src/providers/modifyPDF';
     }),
   ],
   controllers: [StripeController],
-  providers: [StripeService, CloudStorage, ModifyPDF],
+  providers: [StripeService, CloudStorage, ModifyPDF, EmailSender],
 })
 export class StripeModule {}

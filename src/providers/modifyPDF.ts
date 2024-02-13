@@ -1,89 +1,93 @@
 import { Injectable } from '@nestjs/common';
-import {
-  PDFDocument,
-  PDFFont,
-  PDFImage,
-  PDFPage,
-  rgb,
-  StandardFonts,
-} from 'pdf-lib';
-import * as fs from 'fs';
+import { PDFDocument, PDFFont, PDFPage, rgb, StandardFonts } from 'pdf-lib';
 import { Order } from 'src/modules/stripe/entities/order.entity';
 
 @Injectable()
 export class ModifyPDF {
-  async addWatermak(
-    file: Buffer,
+  private pdfDoc: PDFDocument | null;
+  private font: PDFFont;
+  coverPages: Array<number>;
+  client: Order['client'];
+
+  constructor() {
+    this.pdfDoc = null;
+  }
+  // Initailize and modify PDF document
+  async start(
+    basePDF: Buffer,
     coverPages: Array<number>,
-    client?: Order['client'],
+    client: Order['client'],
   ): Promise<Buffer> {
-    const pdfDoc = await PDFDocument.load(file);
-    const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    const imageBytes = fs.readFileSync('./public/watermark.png');
-    const image = await pdfDoc.embedPng(imageBytes);
-    const totalPages = pdfDoc.getPageCount();
-
-    // Modify PDF metadata
-    pdfDoc.setAuthor('Pan Niezniszczalny');
-    pdfDoc.setSubject(
-      `E-book do użytku wyłącznie dla: ${client?.name} (${client?.email})`,
-    );
-    pdfDoc.setKeywords([
-      'Pan Niezniszczalny',
-      'E-book',
-      client?.name || '',
-      client?.email || '',
-    ]);
-    pdfDoc.setProducer('Pan Niezniszczalny');
-    pdfDoc.setCreator('Pan Niezniszczalny');
-
-    // Add watermark to all pages that are not covers
-    for (let pageIndex = 0; pageIndex < totalPages; pageIndex++) {
-      const page = pdfDoc.getPages()[pageIndex];
-      if (!coverPages.includes(pageIndex + 1)) {
-        this.drawWatermark(page, helveticaFont, image, client);
-      }
-    }
-
-    const pdfBytes = await pdfDoc.save();
-    // fs.writeFileSync('./tmp/test.pdf', pdfBytes);
-    return Buffer.from(pdfBytes);
+    this.coverPages = coverPages;
+    this.client = client;
+    this.pdfDoc = await PDFDocument.load(basePDF);
+    this.font = await this.pdfDoc.embedFont(StandardFonts.Helvetica);
+    this.addWatermark();
+    this.updateMetadata();
+    const finalPdf = await this.getPDF();
+    return finalPdf;
   }
 
-  private drawWatermark(
-    page: PDFPage,
-    font: PDFFont,
-    image: PDFImage,
-    client?: Order['client'],
-  ): void {
-    const { width, height } = page.getSize();
-    // console.log('page width : ', width);
-    // console.log('page height : ', height);
-    page.drawImage(image, {
-      x: 50,
-      y: 80,
-      width: 178,
-      height: 300,
-    });
+  private addWatermark(): void {
+    if (!this.pdfDoc) {
+      throw new Error('PDF document not initialized.');
+    }
+    const totalPages = this.pdfDoc.getPageCount();
+    // Add watermark to all pages that are not covers
+    for (let pageIndex = 0; pageIndex < totalPages; pageIndex++) {
+      const page = this.pdfDoc.getPages()[pageIndex];
+      if (!this.coverPages.includes(pageIndex + 1)) {
+        this.drawWatermark(page);
+      }
+    }
+  }
+  private drawWatermark(page: PDFPage): void {
+    // Draw clients details
     page.drawText(
-      `Wersja e-book'a przeznaczona dla: ${client?.name}(${client?.email}).`,
+      `Wersja e-book'a przeznaczona dla: ${this.client.name}(${this.client.email}).`,
       {
         x: 10,
         y: 25,
         size: 8,
-        font: font,
+        font: this.font,
         color: rgb(0, 0, 0),
       },
     );
+    // Draw regulations information
     page.drawText(
       'Regulamin korzystania dostepny pod adresem: www.example.pl/regulamin',
       {
         x: 10,
         y: 15,
         size: 8,
-        font: font,
+        font: this.font,
         color: rgb(0, 0, 0),
       },
     );
+  }
+  private updateMetadata(): void {
+    if (!this.pdfDoc) {
+      throw new Error('PDF document not initialized.');
+    }
+    this.pdfDoc.setAuthor('Pan Niezniszczalny');
+    this.pdfDoc.setSubject(
+      `E-book do użytku wyłącznie dla: ${this.client.name} (${this.client.email})`,
+    );
+    this.pdfDoc.setKeywords([
+      'Pan Niezniszczalny',
+      'E-book',
+      this.client.name || '',
+      this.client.email || '',
+    ]);
+    this.pdfDoc.setProducer('Pan Niezniszczalny');
+    this.pdfDoc.setCreator('Pan Niezniszczalny');
+  }
+  // Get modified document
+  private async getPDF(): Promise<Buffer> {
+    if (!this.pdfDoc) {
+      throw new Error('PDF document not initialized.');
+    }
+    const pdfBytes = await this.pdfDoc.save();
+    return Buffer.from(pdfBytes);
   }
 }

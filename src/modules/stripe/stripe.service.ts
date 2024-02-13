@@ -7,20 +7,31 @@ import { EmailSender } from 'src/providers/emailSender';
 import { SendMailOptions } from 'nodemailer';
 import { CloudStorage } from 'src/providers/cloudStorage';
 import { ModifyPDF } from 'src/providers/modifyPDF';
+import { Order } from './entities/order.entity';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class StripeService {
-  private pdf: Buffer;
   constructor(
     private readonly cloudStorage: CloudStorage,
     private readonly modifyPDF: ModifyPDF,
+    private readonly emailSender: EmailSender,
+    private readonly configService: ConfigService,
   ) {}
 
   @StripeWebhookHandler('checkout.session.completed')
   async handleEvent(event: Stripe.Event): Promise<void> {
-    const dataObject = event.data.object as Stripe.Checkout.Session;
-    if (dataObject) {
-      const coverPages = dataObject.metadata?.coverPages
+    const {
+      metadata,
+      customer_details,
+      custom_fields,
+      payment_intent,
+      amount_total,
+      created,
+    } = event.data.object as Stripe.Checkout.Session;
+
+    if (event.data.object) {
+      const coverPages = metadata?.coverPages
         ?.split(',')
         .map((str) => parseInt(str.trim(), 10));
 
@@ -28,56 +39,62 @@ export class StripeService {
         id: uuidv4(),
         client: {
           name:
-            dataObject.customer_details?.name ||
-            (dataObject.custom_fields[0].text?.value as string),
-          email: dataObject.customer_details?.email as string,
+            customer_details?.name || (custom_fields[0].text?.value as string),
+          email: customer_details?.email as string,
         },
-        prodName: dataObject.metadata?.prodName,
-        finalDocName: dataObject.metadata?.finalDocName,
+        docName: metadata?.docName,
+        finalDocName: metadata?.finalDocName,
         coverPages: coverPages,
-        paymentIntent: dataObject.payment_intent as string,
-        amountTotal: dataObject.amount_total as number,
-        created: dataObject.created,
+        paymentIntent: payment_intent as string,
+        amountTotal: amount_total as number,
+        created: created,
       };
-      console.log('✅ checkout.session.completed!', order);
+      console.log('⭐ Order details:', order);
 
       // Get and modify specific ebook PDF
-      try {
-        const basePDF = await this.cloudStorage.downloadFile(
-          'ebookoid',
-          `${order.prodName}/${order.prodName}.pdf` ||
-            'first-ebook/first-ebook.pdf',
-        );
-        this.pdf = await this.modifyPDF.addWatermak(
-          basePDF,
-          order.coverPages || [0],
-          order.client,
-        );
-      } catch (error) {
-        console.error('Error processing PDF:', error.message);
-        throw new Error('Error processing PDF');
-      }
+      const finalPDF = await this.getEbook(order);
 
       // Send email to the client
-      const emailSender = new EmailSender();
-      const emailOptions: SendMailOptions = {
-        from: {
-          name: 'Pan Niezniszczalny',
-          address: process.env.GOOGLE_EMAIL || '',
-        },
-        to: order.client?.email,
-        subject: 'Twój E-book!',
-        text: `Cześć ${order?.client?.name}! Dziękuję bardzo za zamówienie. Twój e-book jest gotowy, możesz go znaleźć w załączniku. Miłej lektury 🧡`,
-        attachments: [
-          {
-            filename: order.finalDocName || 'e-book.pdf',
-            content: this.pdf,
-            encoding: 'base64',
-          },
-        ],
-      };
-      await emailSender.sendEmail(emailOptions);
+      await this.sendEmail(order, finalPDF);
       console.log('✅ Processing complete!');
     }
+  }
+
+  private async getEbook(order: CreateOrderDto): Promise<Buffer> {
+    try {
+      const basePDF = await this.cloudStorage.downloadFile(
+        'ebookoid',
+        `${order.docName}/${order.docName}.pdf`,
+      );
+
+      return await this.modifyPDF.start(
+        basePDF,
+        order.coverPages || [0],
+        order.client as Order['client'],
+      );
+    } catch (error) {
+      console.error('Error processing PDF:', error.message || error);
+      throw new Error('Error processing PDF');
+    }
+  }
+
+  private async sendEmail(order: CreateOrderDto, file: Buffer): Promise<void> {
+    const emailOptions: SendMailOptions = {
+      from: {
+        name: 'Pan Niezniszczalny',
+        address: this.configService.get<string>('GOOGLE_EMAIL') as string,
+      },
+      to: order.client?.email,
+      subject: 'Twój E-book!',
+      text: `Cześć ${order?.client?.name}! Dziękuję bardzo za zamówienie. Twój e-book jest gotowy, możesz go znaleźć w załączniku. Miłej lektury 🧡`,
+      attachments: [
+        {
+          filename: order.finalDocName || 'e-book.pdf',
+          content: file,
+          encoding: 'base64',
+        },
+      ],
+    };
+    await this.emailSender.sendEmail(emailOptions);
   }
 }

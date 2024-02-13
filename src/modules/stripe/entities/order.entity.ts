@@ -4,7 +4,7 @@ export class Order {
     name: string;
     email: string;
   };
-  prodName: string;
+  docName: string;
   finalDocName: string;
   coverPages: Array<number>;
   paymentIntent: string;
