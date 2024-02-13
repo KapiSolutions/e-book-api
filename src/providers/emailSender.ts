@@ -1,20 +1,25 @@
 import * as nodemailer from 'nodemailer';
 import { google } from 'googleapis';
+import { ConfigService } from '@nestjs/config';
+import { Injectable } from '@nestjs/common';
 
+@Injectable()
 export class EmailSender {
   private transporter: nodemailer.Transporter | null = null;
   private OAuth2 = google.auth.OAuth2;
 
+  constructor(private readonly configService: ConfigService) {}
+
   private async initNodeMailer(): Promise<void> {
     try {
       const oauth2Client = new this.OAuth2(
-        process.env.GOOGLE_CLIENT_ID,
-        process.env.GOOGLE_CLIENT_SECRET,
+        this.configService.get<string>('GOOGLE_CLIENT_ID'),
+        this.configService.get<string>('GOOGLE_CLIENT_SECRET'),
         'https://developers.google.com/oauthplayground',
       );
 
       oauth2Client.setCredentials({
-        refresh_token: process.env.GOOGLE_REFRESH_TOKEN,
+        refresh_token: this.configService.get<string>('GOOGLE_REFRESH_TOKEN'),
       });
 
       const accessToken = await new Promise<string>((resolve, reject) => {
@@ -30,16 +35,16 @@ export class EmailSender {
         service: 'gmail',
         auth: {
           type: 'OAuth2',
-          user: process.env.GOOGLE_EMAIL,
+          user: this.configService.get<string>('GOOGLE_EMAIL'),
           accessToken,
-          clientId: process.env.GOOGLE_CLIENT_ID,
-          clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-          refreshToken: process.env.GOOGLE_REFRESH_TOKEN,
+          clientId: this.configService.get<string>('GOOGLE_CLIENT_ID'),
+          clientSecret: this.configService.get<string>('GOOGLE_CLIENT_SECRET'),
+          refreshToken: this.configService.get<string>('GOOGLE_REFRESH_TOKEN'),
         },
         tls: { rejectUnauthorized: false },
       });
-    } catch (err) {
-      console.error('Error initializing nodemailer:', err);
+    } catch (error) {
+      console.error('Error initializing nodemailer:', error.message || error);
       throw new Error('Failed to initialize nodemailer');
     }
   }
@@ -55,8 +60,8 @@ export class EmailSender {
       }
       await this.transporter.sendMail(options);
       console.log('✅ Email sent successfully');
-    } catch (err) {
-      console.error('Error sending email:', err);
+    } catch (error) {
+      console.error('Error sending email:', error.message || error);
       throw new Error('Failed to send email');
     } finally {
       this.transporter?.close();
