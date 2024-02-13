@@ -11,6 +11,7 @@ import { ModifyPDF } from 'src/providers/modifyPDF';
 @Injectable()
 export class StripeService {
   private pdf: Buffer;
+
   constructor(
     private readonly cloudStorage: CloudStorage,
     private readonly modifyPDF: ModifyPDF,
@@ -47,10 +48,11 @@ export class StripeService {
           'ebookoid',
           `${order.docName}/${order.docName}.pdf`,
         );
-        this.pdf = await this.modifyPDF.addWatermak(
+
+        this.pdf = await this.modifyPDF.start(
           basePDF,
           order.coverPages || [0],
-          order.client,
+          order.client || { name: 'string', email: 'string' },
         );
       } catch (error) {
         console.error('Error processing PDF:', error.message);
