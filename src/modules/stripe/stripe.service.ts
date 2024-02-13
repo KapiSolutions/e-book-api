@@ -32,7 +32,7 @@ export class StripeService {
             (dataObject.custom_fields[0].text?.value as string),
           email: dataObject.customer_details?.email as string,
         },
-        prodName: dataObject.metadata?.prodName,
+        docName: dataObject.metadata?.docName,
         finalDocName: dataObject.metadata?.finalDocName,
         coverPages: coverPages,
         paymentIntent: dataObject.payment_intent as string,
@@ -45,8 +45,7 @@ export class StripeService {
       try {
         const basePDF = await this.cloudStorage.downloadFile(
           'ebookoid',
-          `${order.prodName}/${order.prodName}.pdf` ||
-            'first-ebook/first-ebook.pdf',
+          `${order.docName}/${order.docName}.pdf`,
         );
         this.pdf = await this.modifyPDF.addWatermak(
           basePDF,
