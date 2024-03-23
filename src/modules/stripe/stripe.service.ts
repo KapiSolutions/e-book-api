@@ -84,6 +84,7 @@ export class StripeService {
     file: Buffer,
   ): Promise<void> {
     const adminEmail = this.configService.get<string>('GOOGLE_EMAIL') as string;
+    const subject = `Twój E-book jest gotowy! (id: ${order.paymentIntent})`;
     const message = `Cześć ${order?.client?.name}! Dziękuję bardzo za zamówienie. Twój e-book jest gotowy, możesz go znaleźć w załączniku. Miłej lektury 🧡`;
     const emailOptions: SendMailOptions = {
       from: {
@@ -91,7 +92,7 @@ export class StripeService {
         address: adminEmail,
       },
       to: order.client?.email,
-      subject: 'Twój E-book!',
+      subject: subject,
       text: message,
       attachments: [
         {
@@ -106,23 +107,27 @@ export class StripeService {
 
   private async sendEmailToAdmin(order: CreateOrderDto): Promise<void> {
     const adminEmail = this.configService.get<string>('GOOGLE_EMAIL') as string;
-    const subject = `Nowa sprzedaż id: ${order.paymentIntent}!`;
+    const notificationEmail = this.configService.get<string>(
+      'NOTIFICATION_EMAIL',
+    ) as string;
+    const amount = order.amountTotal && (order.amountTotal / 100).toFixed(2);
+    const subject = `E-book sprzedany! 🎉 (Kwota: ${amount} PLN, id: ${order.paymentIntent})`;
+
     const message = `Cześć! \n
-    Właśnie ktoś kupił Twojego E-booka!🧡 \n
+    Właśnie ktoś kupił Twojego E-booka! 🎉 \n
     Zamówienie przebiegło pomyślnie. Oto szczegóły: \n
-    - Klient: ${order.client?.name} \n
-    - E-mail: ${order.client?.email} \n
+    - Klient: ${order.client?.name} (${order.client?.email})\n
     - E-book: ${order.finalDocName} \n
-    - Kwota zamówienia: ${order.amountTotal} \n
+    - Kwota zamówienia: ${amount} PLN \n
     - ID zamówienia: ${order.paymentIntent} \n\n
-    Gratulacje!`;
+    Gratulacje! 🧡`;
 
     const emailOptions: SendMailOptions = {
       from: {
         name: 'Pan Niezniszczalny',
         address: adminEmail,
       },
-      to: adminEmail,
+      to: notificationEmail,
       subject: subject,
       text: message,
     };
