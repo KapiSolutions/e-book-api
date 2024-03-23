@@ -53,9 +53,10 @@ export class StripeService {
 
       // Get and modify specific ebook PDF
       const finalPDF = await this.getEbook(order);
-
       // Send email to the client
-      await this.sendEmail(order, finalPDF);
+      await this.sendEmailToClient(order, finalPDF);
+      // Send email to the admin
+      await this.sendEmailToAdmin(order);
       console.log('✅ Processing complete!');
     }
   }
@@ -78,15 +79,20 @@ export class StripeService {
     }
   }
 
-  private async sendEmail(order: CreateOrderDto, file: Buffer): Promise<void> {
+  private async sendEmailToClient(
+    order: CreateOrderDto,
+    file: Buffer,
+  ): Promise<void> {
+    const adminEmail = this.configService.get<string>('GOOGLE_EMAIL') as string;
+    const message = `Cześć ${order?.client?.name}! Dziękuję bardzo za zamówienie. Twój e-book jest gotowy, możesz go znaleźć w załączniku. Miłej lektury 🧡`;
     const emailOptions: SendMailOptions = {
       from: {
         name: 'Pan Niezniszczalny',
-        address: this.configService.get<string>('GOOGLE_EMAIL') as string,
+        address: adminEmail,
       },
       to: order.client?.email,
       subject: 'Twój E-book!',
-      text: `Cześć ${order?.client?.name}! Dziękuję bardzo za zamówienie. Twój e-book jest gotowy, możesz go znaleźć w załączniku. Miłej lektury 🧡`,
+      text: message,
       attachments: [
         {
           filename: order.finalDocName || 'e-book.pdf',
@@ -94,6 +100,31 @@ export class StripeService {
           encoding: 'base64',
         },
       ],
+    };
+    await this.emailSender.sendEmail(emailOptions);
+  }
+
+  private async sendEmailToAdmin(order: CreateOrderDto): Promise<void> {
+    const adminEmail = this.configService.get<string>('GOOGLE_EMAIL') as string;
+    const subject = `Nowa sprzedaż id: ${order.paymentIntent}!`;
+    const message = `Cześć! \n
+    Właśnie ktoś kupił Twojego E-booka!🧡 \n
+    Zamówienie przebiegło pomyślnie. Oto szczegóły: \n
+    - Klient: ${order.client?.name} \n
+    - E-mail: ${order.client?.email} \n
+    - E-book: ${order.finalDocName} \n
+    - Kwota zamówienia: ${order.amountTotal} \n
+    - ID zamówienia: ${order.paymentIntent} \n\n
+    Gratulacje!`;
+
+    const emailOptions: SendMailOptions = {
+      from: {
+        name: 'Pan Niezniszczalny',
+        address: adminEmail,
+      },
+      to: adminEmail,
+      subject: subject,
+      text: message,
     };
     await this.emailSender.sendEmail(emailOptions);
   }
