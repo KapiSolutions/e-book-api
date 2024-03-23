@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { StripeModule } from './modules/stripe/stripe.module';
+import { PdfModule } from './modules/pdf/pdf.module';
 import config from './config/config';
 
 @Module({
@@ -12,6 +13,7 @@ import config from './config/config';
       load: [config],
     }),
     StripeModule,
+    PdfModule,
   ],
   controllers: [AppController],
   providers: [AppService],
