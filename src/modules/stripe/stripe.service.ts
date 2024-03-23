@@ -84,7 +84,7 @@ export class StripeService {
     file: Buffer,
   ): Promise<void> {
     const adminEmail = this.configService.get<string>('GOOGLE_EMAIL') as string;
-    const subject = `Twój E-book jest gotowy! (id: ${order.paymentIntent})`;
+    const subject = `Twój E-book jest gotowy! 🎉 (id: ${order.paymentIntent})`;
     const message = `Cześć ${order?.client?.name}! Dziękuję bardzo za zamówienie. Twój e-book jest gotowy, możesz go znaleźć w załączniku. Miłej lektury 🧡`;
     const emailOptions: SendMailOptions = {
       from: {
@@ -113,14 +113,14 @@ export class StripeService {
     const amount = order.amountTotal && (order.amountTotal / 100).toFixed(2);
     const subject = `E-book sprzedany! 🎉 (Kwota: ${amount} PLN, id: ${order.paymentIntent})`;
 
-    const message = `Cześć! \n
-    Właśnie ktoś kupił Twojego E-booka! 🎉 \n
-    Zamówienie przebiegło pomyślnie. Oto szczegóły: \n
-    - Klient: ${order.client?.name} (${order.client?.email})\n
-    - E-book: ${order.finalDocName} \n
-    - Kwota zamówienia: ${amount} PLN \n
-    - ID zamówienia: ${order.paymentIntent} \n\n
-    Gratulacje! 🧡`;
+    const message = `Cześć!
+Ktoś właśnie kupił Twojego E-booka! 🎉 \n
+Zamówienie przebiegło pomyślnie. Oto szczegóły:
+    - Klient: ${order.client?.name} (${order.client?.email})
+    - E-book: ${order.finalDocName}
+    - Kwota zamówienia: ${amount} PLN
+    - ID zamówienia: ${order.paymentIntent}\n
+Gratulacje! 🧡`;
 
     const emailOptions: SendMailOptions = {
       from: {
