@@ -55,7 +55,7 @@ export class PdfService {
     const subject = `Wygenerowany E-book dla ${data.clientName}!`;
     const emailOptions: SendMailOptions = {
       from: {
-        name: 'Pan Niezniszczalny',
+        name: 'Twój E-book',
         address: emailAdmin,
       },
       to: emailAdmin,
@@ -63,7 +63,7 @@ export class PdfService {
       text: message,
       attachments: [
         {
-          filename: data.finalDocName || 'e-book.pdf',
+          filename: data.finalDocName || 'E-book.pdf',
           content: file,
           encoding: 'base64',
         },
