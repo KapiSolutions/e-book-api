@@ -84,11 +84,18 @@ export class StripeService {
     file: Buffer,
   ): Promise<void> {
     const adminEmail = this.configService.get<string>('GOOGLE_EMAIL') as string;
-    const subject = `Twój E-book jest gotowy! 🎉 (id: ${order.paymentIntent})`;
-    const message = `Cześć ${order?.client?.name}! Dziękuję bardzo za zamówienie. Twój e-book jest gotowy, możesz go znaleźć w załączniku. Miłej lektury 🧡`;
+    const subject = `Twój E-book jest gotowy! 🎉`;
+    const message = `Cześć ${order?.client?.name}!
+Dziękuję bardzo za zamówienie.
+Twój e-book jest gotowy, możesz go znaleźć w załączniku. Miłej lektury 🧡
+
+ID zamówienia: ${order.paymentIntent}
+
+Pozdrawiamy,
+zespół Twój E-book!`;
     const emailOptions: SendMailOptions = {
       from: {
-        name: 'Pan Niezniszczalny',
+        name: 'Twój E-book',
         address: adminEmail,
       },
       to: order.client?.email,
@@ -124,7 +131,7 @@ Gratulacje! 🧡`;
 
     const emailOptions: SendMailOptions = {
       from: {
-        name: 'Pan Niezniszczalny',
+        name: 'Twój E-book',
         address: adminEmail,
       },
       to: notificationEmail,
